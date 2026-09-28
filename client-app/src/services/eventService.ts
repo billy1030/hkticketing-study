@@ -65,33 +65,6 @@ class EventService {
         ],
       },
     ],
-    [
-      '50000001568001',
-      {
-        projectId: '50000001568001',
-        projectName: 'COLDPLAY: MUSIC OF THE SPHERES (HONG KONG)',
-        venueName: '啟德體育園主場館 (Kai Tak Stadium)',
-        coverUrl: 'https://gw.alicdn.com/imgextra/i3/O1CN01WOCr2D21WqpJENE48_!!6000000006993-1-tps-200-200.gif',
-        waitingRoomStartTime: this.getTimestamp(0, 10, 0),
-        saleStartTime: this.getTimestamp(0, 10, 30),
-        saleEndTime: this.getTimestamp(0, 23, 59),
-        serverTime: Date.now(),
-        status: 'UPCOMING',
-        sessions: [
-          {
-            sessionId: 'sess_coldplay_1',
-            sessionName: '11 Apr 2026 (Saturday) 20:00',
-            bizDate: '2026-04-11 20:00',
-            tiers: [
-              { priceId: 'tier_cp_vip', priceName: 'Ultimate Spheres Experience', price: 6599, stockStatus: 'AVAILABLE', maxPurchase: 2, isStanding: false },
-              { priceId: 'tier_cp_ga', priceName: 'General Admission Standing', price: 1399, stockStatus: 'AVAILABLE', maxPurchase: 4, isStanding: true },
-              { priceId: 'tier_cp_seated', priceName: 'Reserved Seated Level 1', price: 2099, stockStatus: 'AVAILABLE', maxPurchase: 4, isStanding: false },
-              { priceId: 'tier_cp_entry', priceName: 'Restricted View Entry', price: 699, stockStatus: 'AVAILABLE', maxPurchase: 4, isStanding: false },
-            ],
-          },
-        ],
-      },
-    ],
   ]);
 
   /**

@@ -18,6 +18,7 @@ import {
   FastForward,
   Radar,
   Activity,
+  Search,
 } from 'lucide-react';
 import type { EventDetail, QueueSlot } from './types';
 import { eventService } from './services/eventService';
@@ -33,6 +34,31 @@ export const App: React.FC = () => {
   const [autoHandoff, setAutoHandoff] = useState<boolean>(true);
   const [engineMode, setEngineMode] = useState<'LIVE' | 'SIMULATION'>('LIVE');
   const [confidence, setConfidence] = useState<{ live: boolean; queueActive: boolean; score: number } | null>(null);
+  const [customPidInput, setCustomPidInput] = useState<string>('');
+  const [isProbingCustom, setIsProbingCustom] = useState<boolean>(false);
+
+  const handleAddCustomProject = async () => {
+    let raw = customPidInput.trim();
+    if (!raw) return;
+
+    // Extract numbers if user pasted a URL
+    const match = raw.match(/(?:activityId|projectId|detail\/)?([0-9]{8,18})/);
+    const pid = match ? match[1] : raw;
+
+    setIsProbingCustom(true);
+    try {
+      const res = await eventService.probeProjectConfidence(pid);
+      const detail = await eventService.getEventDetail(pid);
+      eventService.registerDiscoveredEvent(detail);
+      setTargetPid(pid);
+      slotManager.setProjectId(pid);
+      setConfidence({ live: res.live, queueActive: res.queueActive, score: res.confidence });
+      setEvent(detail);
+      setCustomPidInput('');
+    } finally {
+      setIsProbingCustom(false);
+    }
+  };
 
   useEffect(() => {
     // Initial fetch for target Project ID
@@ -533,7 +559,7 @@ export const App: React.FC = () => {
                     fontSize: '12px',
                     fontWeight: 600,
                     outline: 'none',
-                    marginBottom: '10px',
+                    marginBottom: '8px',
                     cursor: 'pointer',
                   }}
                 >
@@ -543,6 +569,51 @@ export const App: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                {/* Custom Project ID / URL Probe Input */}
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Paste Project ID or HKT URL..."
+                    value={customPidInput}
+                    onChange={(e) => setCustomPidInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddCustomProject();
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '6px',
+                      padding: '6px 8px',
+                      fontSize: '11px',
+                      color: '#fff',
+                      fontFamily: 'var(--font-mono)',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={handleAddCustomProject}
+                    disabled={isProbingCustom}
+                    title="Probe event status against HK Ticketing waitingroom gateway and add to target list"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      color: 'var(--accent-purple)',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: isProbingCustom ? 'wait' : 'pointer',
+                    }}
+                  >
+                    <Search size={12} />
+                    {isProbingCustom ? '...' : 'Probe'}
+                  </button>
+                </div>
 
                 <h2 style={{ fontSize: '16px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px' }}>
                   {event.projectName}
