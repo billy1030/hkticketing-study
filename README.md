@@ -171,8 +171,8 @@ flowchart TD
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/billy1030/hktickting-study.git
-cd hktickting-study
+git clone https://github.com/billy1030/hkticketing-study.git
+cd hkticketing-study
 ```
 
 ### 2. Run the Client Application
