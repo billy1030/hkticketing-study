@@ -126,8 +126,8 @@ class SlotManager {
   public setProjectId(projectId: string) {
     this.projectId = projectId;
     this.slots.forEach((item) => {
-      // Reinitialize or update
       item.engine.stop();
+      item.engine.setProjectId(projectId);
       item.slot.status = 'IDLE';
       item.slot.progress = 0;
       item.slot.logs.unshift(`[${new Date().toLocaleTimeString()}] Switched target Project ID: ${projectId}`);

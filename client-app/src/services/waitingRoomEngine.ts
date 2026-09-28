@@ -50,6 +50,10 @@ export class WaitingRoomEngine {
 
   public mode: 'LIVE' | 'SIMULATION' = 'LIVE';
 
+  public setProjectId(projectId: string) {
+    this.projectId = projectId;
+  }
+
   /**
    * Dual-track polling against real /api/waitingRoom/queryQualified or fallback simulation
    */

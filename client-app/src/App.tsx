@@ -16,6 +16,8 @@ import {
   ExternalLink,
   RotateCcw,
   FastForward,
+  Radar,
+  Activity,
 } from 'lucide-react';
 import type { EventDetail, QueueSlot } from './types';
 import { eventService } from './services/eventService';
@@ -27,13 +29,30 @@ export const App: React.FC = () => {
   const [now, setNow] = useState<number>(Date.now());
   const [selectedSlotId, setSelectedSlotId] = useState<string>('');
   const [checkoutNotice, setCheckoutNotice] = useState<string>('');
-  const [engineMode, setEngineMode] = useState<'LIVE' | 'SIMULATION'>('LIVE');
-  const targetPid = '50000001568003';
+  const [targetPid, setTargetPid] = useState<string>('50000001568003');
   const [autoHandoff, setAutoHandoff] = useState<boolean>(true);
+  const [engineMode, setEngineMode] = useState<'LIVE' | 'SIMULATION'>('LIVE');
+  const [confidence, setConfidence] = useState<{ live: boolean; queueActive: boolean; score: number } | null>(null);
 
   useEffect(() => {
     // Initial fetch for target Project ID
     eventService.getEventDetail(targetPid).then(setEvent);
+    eventService.probeProjectConfidence(targetPid).then((res) => {
+      setConfidence({ live: res.live, queueActive: res.queueActive, score: res.confidence });
+    });
+
+    // BroadcastChannel listener for userscript auto-discovered events
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('hkt_live_events') : null;
+    if (channel) {
+      channel.onmessage = (msg) => {
+        if (msg.data && msg.data.projectId) {
+          eventService.registerDiscoveredEvent(msg.data);
+          if (msg.data.projectId === targetPid) {
+            setEvent(msg.data);
+          }
+        }
+      };
+    }
 
     // Subscribe to multi-slot updates
     const unsubscribe = slotManager.subscribe((slotList) => {
@@ -49,10 +68,11 @@ export const App: React.FC = () => {
     }, 100);
 
     return () => {
+      if (channel) channel.close();
       unsubscribe();
       clearInterval(ticker);
     };
-  }, []);
+  }, [targetPid]);
 
   // Time remaining to 15:30 waiting room and 16:00 public sale
   const msToWaitingRoom = event?.waitingRoomStartTime ? Math.max(0, event.waitingRoomStartTime - now) : 0;
@@ -457,25 +477,80 @@ export const App: React.FC = () => {
           {event && (
             <>
               <div>
-                <div
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      color: 'var(--accent-indigo)',
+                      letterSpacing: '1px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Radar size={13} color="var(--accent-indigo)" />
+                    Target Concert
+                  </div>
+
+                  {confidence && (
+                    <span
+                      title="Real-time connectivity confidence against official HK Ticketing waitingroom gateway"
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontWeight: 700,
+                        background: confidence.live ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: confidence.live ? '#10b981' : '#ef4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                    >
+                      <Activity size={10} />
+                      {confidence.score}% CONFIDENCE
+                    </span>
+                  )}
+                </div>
+
+                {/* Concert Quick-Selector Dropdown */}
+                <select
+                  value={targetPid}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    setTargetPid(pid);
+                    slotManager.setProjectId(pid);
+                  }}
                   style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    color: 'var(--accent-indigo)',
-                    letterSpacing: '1px',
-                    marginBottom: '4px',
+                    width: '100%',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    padding: '8px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    marginBottom: '10px',
+                    cursor: 'pointer',
                   }}
                 >
-                  Target Event
-                </div>
-                <h2 style={{ fontSize: '17px', fontWeight: 700, lineHeight: 1.3, marginBottom: '6px' }}>
+                  {eventService.getAvailableConcerts().map((c) => (
+                    <option key={c.projectId} value={c.projectId} style={{ background: '#12141c', color: '#fff' }}>
+                      {c.projectName} ({c.projectId.slice(-6)})
+                    </option>
+                  ))}
+                </select>
+
+                <h2 style={{ fontSize: '16px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px' }}>
                   {event.projectName}
                 </h2>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{event.venueName}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{event.venueName}</div>
               </div>
 
-              {/* Status Badge */}
+              {/* Status Badge & Health Indicator */}
               <div
                 style={{
                   background: 'var(--bg-surface)',
@@ -489,20 +564,20 @@ export const App: React.FC = () => {
               >
                 <div>
                   <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Project ID</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '13px' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '12px' }}>
                     {event.projectId}
                   </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Status</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Queue Gateway</div>
                   <div
                     style={{
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 700,
-                      color: isSaleOpen ? '#10b981' : '#f59e0b',
+                      color: confidence?.live ? '#10b981' : '#f59e0b',
                     }}
                   >
-                    {isSaleOpen ? 'AVAILABLE' : 'PENDING'}
+                    {confidence?.queueActive ? 'WAITING ROOM ACTIVE' : 'OPEN / QUALIFIED'}
                   </div>
                 </div>
               </div>

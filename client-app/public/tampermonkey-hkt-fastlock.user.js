@@ -222,4 +222,61 @@
       }
     });
   }
+
+  // --- AUTOMATIC CONCERT DISCOVERY BRIDGE ---
+  // When browsing allEvents or project pages, broadcast discovered concert metadata to the local desktop client app
+  function discoverConcerts() {
+    try {
+      const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('hkt_live_events') : null;
+      if (!channel) return;
+
+      // Check current URL for activityId / projectId
+      const urlMatch = window.location.href.match(/(?:activityId|projectId|projectDetail\/|detail\/)([0-9]{10,18})/);
+      if (urlMatch) {
+        const foundPid = urlMatch[1];
+        const h1 = document.querySelector('h1, .project-name, .title, .event-title');
+        const venue = document.querySelector('.venue-name, .venue, .address');
+        const eventName = h1 ? h1.innerText.trim() : document.title.replace('- HK Ticketing', '').trim();
+        const venueName = venue ? venue.innerText.trim() : 'Hong Kong Venue';
+
+        if (foundPid) {
+          channel.postMessage({
+            projectId: foundPid,
+            projectName: eventName || `Concert ${foundPid}`,
+            venueName: venueName,
+            status: 'UPCOMING',
+            sessions: []
+          });
+          log(`Discovered & broadcasted concert: [${foundPid}] ${eventName}`);
+        }
+      }
+
+      // Also scan event cards on #/allEvents
+      const eventCards = document.querySelectorAll('a[href*="detail"], .event-item, .project-card');
+      eventCards.forEach((card) => {
+        const href = card.getAttribute('href') || '';
+        const idMatch = href.match(/([0-9]{10,18})/);
+        if (idMatch) {
+          const pid = idMatch[1];
+          const nameEl = card.querySelector('.title, .name, h2, h3, h4');
+          const name = nameEl ? nameEl.innerText.trim() : card.innerText.split('\n')[0];
+          if (name && name.length > 2) {
+            channel.postMessage({
+              projectId: pid,
+              projectName: name,
+              venueName: 'Hong Kong Venue',
+              status: 'UPCOMING',
+              sessions: []
+            });
+          }
+        }
+      });
+    } catch (e) {
+      // Fail silently
+    }
+  }
+
+  // Run discovery on page load and route changes
+  setTimeout(discoverConcerts, 1200);
+  window.addEventListener('hashchange', () => setTimeout(discoverConcerts, 1200));
 })();
