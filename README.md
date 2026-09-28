@@ -21,37 +21,20 @@
 
 HK Ticketing transitioned away from legacy ticketing infrastructures onto Alibaba Cloud’s enterprise ticketing ecosystem (**iMaitix / Damai / MaiZuo**). The frontend is built on **UmiJS + React SPA**, distributed across **Alibaba Cloud ESA (Edge Security Acceleration) CDN**, with edge WAF proxies fronting the core API gateway at `rest-sig.imaitix.com`.
 
-```text
- ┌─────────────────────────────────────────────────────────────────┐
- │                   End User Client (Web / App)                   │
- └─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
- ┌─────────────────────────────────────────────────────────────────┐
- │  Alibaba Cloud ESA / Edge WAF Security Perimeter                │
- │  • Cookies: acw_tc, cdn_sec_tc, EagleId, cna, _m_h5_tk          │
- │  • Bot Defense: AWSC (awsc.js), Baxia (baxiaCommon.js)          │
- │  • Telemetry: Aplus (sg.mmstat.com)                             │
- └─────────────────────────────────────────────────────────────────┘
-                                  │
-          ┌───────────────────────┴────────────────────────┐
-          ▼                                                ▼
- ┌───────────────────────────────┐     ┌───────────────────────────────────┐
- │ Static Assets & Edge Check    │     │ Core API Gateway                  │
- │ (wr-static.maitix.com)        │     │ (rest-sig.imaitix.com)            │
- │ • Edge CDN Cache Check (/check│     │ • /api/waitingRoom/queryQualified │
- │ • Degraded Load Polling Engine│     │ • /api/waitingRoom/quit           │
- │ • Dynamic Backoff Scheduling  │     │ • /api/maipay2/renderPay          │
- └───────────────────────────────┘     │ • /api/maipay2/doSyncNotifyQuery  │
-                                       └───────────────────────────────────┘
-                                                           │
-                                                           ▼
-                                       ┌───────────────────────────────────┐
-                                       │ MaiZuo / Maitix Ticketing Engine  │
-                                       │ • Redis Distributed Seat Lock     │
-                                       │ • Queue Token State Machine       │
-                                       │ • MaiPay Payment Orchestration    │
-                                       └───────────────────────────────────┘
+```mermaid
+flowchart TD
+    Client["Client Browser / Mobile App"] --> EdgeWAF["Alibaba Cloud ESA / Edge WAF<br/>(acw_tc, cdn_sec_tc, EagleId, Baxia, AWSC)"]
+    
+    EdgeWAF --> Static["wr-static.maitix.com<br/>(Edge CDN Cache Queue Probes)"]
+    EdgeWAF --> APIGateway["Core API Gateway<br/>(rest-sig.imaitix.com)"]
+    
+    APIGateway --> Engine["MaiZuo / Maitix Ticketing Engine"]
+    Engine --> RedisLock["Redis Distributed Seat Lock"]
+    Engine --> MaiPay["MaiPay Payment Gateway"]
+
+    classDef default fill:#1a1d29,stroke:#3b82f6,stroke-width:1px,color:#f8fafc;
+    classDef highlight fill:#1e293b,stroke:#10b981,stroke-width:2px,color:#34d399;
+    class Engine,RedisLock,MaiPay highlight;
 ```
 
 ---
@@ -163,23 +146,18 @@ The client application is built with **Vite + React 19 + TypeScript + Lucide-rea
   3. 🥉 **Priority 3**: `HK$1,299`
 
 ### Execution Lifecycle:
-```text
-[ Browser Lands on /selectTicket?previewToken=... ]
-                       │
-                       ▼ (Within 50ms)
-[ 1. Selects 17 Nov 2026 19:00 Session ]
-                       │
-                       ▼
-[ 2. Auto-selects HK$699 Tier (Falls back to 899/1299 if sold out) ]
-                       │
-                       ▼
-[ 3. Increments Ticket Count to 3 ]
-                       │
-                       ▼
-[ 4. Checks "Agree to Terms and Conditions" ]
-                       │
-                       ▼
-[ 5. Submits "Confirm / Buy Now" ] ──► [ Seats Locked in Redis (10-15 Min Hold) ]
+```mermaid
+flowchart TD
+    Land["Browser Lands on /selectTicket (with previewToken)"] --> Step1["1. Select 17 Nov 2026 19:00 Session"]
+    Step1 --> Step2["2. Auto-Select HK$699 Tier (Fallback to 899/1299 if sold out)"]
+    Step2 --> Step3["3. Increment Ticket Count to 3"]
+    Step3 --> Step4["4. Accept Terms & Conditions Checkbox"]
+    Step4 --> Step5["5. Click Confirm / Buy Now Button"]
+    Step5 --> Locked["Seats Locked in Redis (10-15 Min Checkout Hold)"]
+
+    classDef default fill:#1e293b,stroke:#3b82f6,stroke-width:1px,color:#f8fafc;
+    classDef success fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#34d399;
+    class Locked success;
 ```
 
 ---
