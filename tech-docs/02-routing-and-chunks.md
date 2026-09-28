@@ -1,4 +1,4 @@
-﻿# 02 - 前端路由體系與 Webpack 分包策略
+# 02 - 前端路由體系與 Webpack 分包策略
 
 ## 1. UmiJS 路由映射機制
 
@@ -49,7 +49,7 @@ HK Ticketing 前端工程採用阿里開源的 **UmiJS (Webpack 5)** 構建，�
 
 在各個頁面流轉中，系統使用了一組嚴格的 Query 參數以維持購票上下文狀態：
 
-`
+```text
 /allEvents/detail?projectId=12345
         │
         │ (觸發排隊判定)
@@ -59,7 +59,7 @@ HK Ticketing 前端工程採用阿里開源的 **UmiJS (Webpack 5)** 構建，�
         │ (排隊通過，由 _() 函數攜帶 Token 自動 replace 路由)
         ▼
 /allEvents/detail/selectTicket?activityId=12345&visibleToken=VT_XYZ&previewToken=PT_ABC&bizScene=DEFAULT
-`
+```
 
 - projectId / ctivityId：節目活動唯一標識符。
 - isibleToken：針對特權場次、信用卡優先購票、會員預售所必須的入場權益憑證。

@@ -1,4 +1,4 @@
-﻿# 01 - HK Ticketing 系統架構與阿里雲生態概覽
+# 01 - HK Ticketing 系統架構與阿里雲生態概覽
 
 ## 1. 系統演進背景
 
@@ -26,7 +26,7 @@
 
 ## 3. 系統端到端請求流轉架構圖 (End-to-End Request Flow)
 
-`
+```text
 +-------------------------------------------------------------------------------+
 |                             Client Browser / App                              |
 |                                                                               |
@@ -54,7 +54,7 @@
                                                          ▼
                                           [ wr-static.maitix.com ]
                                          (Edge-cached Queue Probes)
-`
+```
 
 ---
 
