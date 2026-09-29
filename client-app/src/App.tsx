@@ -19,6 +19,8 @@ import {
   Radar,
   Activity,
   Search,
+  Settings,
+  Calendar,
 } from 'lucide-react';
 import type { EventDetail, QueueSlot } from './types';
 import { eventService } from './services/eventService';
@@ -118,22 +120,47 @@ export const App: React.FC = () => {
 
   const selectedSlot = slots.find((s) => s.id === selectedSlotId) || slots[0];
 
+  const [showTimeSetup, setShowTimeSetup] = useState<boolean>(false);
+  const [customWrInput, setCustomWrInput] = useState<string>('15:30');
+  const [customSaleInput, setCustomSaleInput] = useState<string>('16:00');
+
   const handleInstantSaleTrigger = () => {
-    eventService.setEventSaleTime(Date.now() - 1000);
+    eventService.setEventSaleTime(Date.now() - 1000, targetPid);
     eventService.getEventDetail(targetPid).then(setEvent);
+  };
+
+  const handleApplyCustomTimes = () => {
+    const parseTime = (timeStr: string) => {
+      const parts = timeStr.split(':').map(Number);
+      const h = isNaN(parts[0]) ? 16 : parts[0];
+      const m = isNaN(parts[1]) ? 0 : parts[1];
+      const s = isNaN(parts[2]) ? 0 : parts[2];
+      const d = new Date();
+      d.setHours(h, m, s, 0);
+      return d.getTime();
+    };
+
+    const wrTime = parseTime(customWrInput);
+    const saleTime = parseTime(customSaleInput);
+
+    eventService.setSaleTimes(wrTime, saleTime, targetPid);
+    eventService.getEventDetail(targetPid).then((updated) => {
+      setEvent(updated);
+      setShowTimeSetup(false);
+    });
   };
 
   const handleResetSaleTimer = () => {
     const wr = new Date();
-    wr.setDate(wr.getDate() + 1);
     wr.setHours(15, 30, 0, 0);
 
     const sale = new Date();
-    sale.setDate(sale.getDate() + 1);
     sale.setHours(16, 0, 0, 0);
 
-    eventService.setSaleTimes(wr.getTime(), sale.getTime());
+    eventService.setSaleTimes(wr.getTime(), sale.getTime(), targetPid);
     eventService.getEventDetail(targetPid).then(setEvent);
+    setCustomWrInput('15:30');
+    setCustomSaleInput('16:00');
   };
 
   const [copiedSlotId, setCopiedSlotId] = useState<string>('');
@@ -317,6 +344,33 @@ export const App: React.FC = () => {
             >
               <RotateCcw size={13} />
             </button>
+            <button
+              onClick={() => setShowTimeSetup(!showTimeSetup)}
+              title="Time Configuration: Setup custom Waiting Room & Public Sale start times"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '26px',
+                height: '26px',
+                background: showTimeSetup ? 'rgba(99, 102, 241, 0.35)' : 'transparent',
+                color: showTimeSetup ? '#818cf8' : 'var(--text-muted)',
+                border: showTimeSetup ? '1px solid #6366f1' : '1px solid var(--border-subtle)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = showTimeSetup ? 'rgba(99, 102, 241, 0.35)' : 'transparent';
+                e.currentTarget.style.color = showTimeSetup ? '#818cf8' : 'var(--text-muted)';
+              }}
+            >
+              <Settings size={13} />
+            </button>
           </div>
         </div>
 
@@ -484,6 +538,122 @@ export const App: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* Time Configuration Modal / Dropdown */}
+      {showTimeSetup && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '70px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            background: '#161922',
+            border: '1px solid #3b4261',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            minWidth: '360px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#fff' }}>
+              <Calendar size={15} color="#818cf8" />
+              Configure Target Event Timers
+            </div>
+            <button
+              onClick={() => setShowTimeSetup(false)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: '14px' }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
+                Waiting Room Open (HH:mm)
+              </label>
+              <input
+                type="text"
+                value={customWrInput}
+                onChange={(e) => setCustomWrInput(e.target.value)}
+                placeholder="15:30"
+                style={{
+                  width: '100%',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '13px',
+                  color: '#fff',
+                  fontFamily: 'var(--font-mono)',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
+                Public Sale Starts (HH:mm)
+              </label>
+              <input
+                type="text"
+                value={customSaleInput}
+                onChange={(e) => setCustomSaleInput(e.target.value)}
+                placeholder="16:00"
+                style={{
+                  width: '100%',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '13px',
+                  color: '#fff',
+                  fontFamily: 'var(--font-mono)',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
+            <button
+              onClick={handleResetSaleTimer}
+              style={{
+                background: 'transparent',
+                color: 'var(--text-dim)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              Reset to 15:30 / 16:00
+            </button>
+            <button
+              onClick={handleApplyCustomTimes}
+              style={{
+                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)',
+              }}
+            >
+              Apply Times
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace Body */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

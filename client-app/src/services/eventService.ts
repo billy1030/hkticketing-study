@@ -37,9 +37,9 @@ class EventService {
         projectName: 'BIGBANG CONCERT / TOUR IN HONG KONG',
         venueName: '啟德體育園主場館 (Kai Tak Stadium)',
         coverUrl: 'https://gw.alicdn.com/imgextra/i3/O1CN01WOCr2D21WqpJENE48_!!6000000006993-1-tps-200-200.gif',
-        waitingRoomStartTime: this.getTimestamp(1, 15, 30),
-        saleStartTime: this.getTimestamp(1, 16, 0),
-        saleEndTime: this.getTimestamp(1, 23, 59),
+        waitingRoomStartTime: this.getTimestamp(0, 15, 30),
+        saleStartTime: this.getTimestamp(0, 16, 0),
+        saleEndTime: this.getTimestamp(0, 23, 59),
         serverTime: Date.now(),
         status: 'UPCOMING',
         sessions: [
@@ -141,13 +141,13 @@ class EventService {
     };
   }
 
-  public setEventSaleTime(newStartTime: number) {
-    const current = this.catalog.get('50000001568003');
+  public setEventSaleTime(newStartTime: number, projectId: string = '50000001568003') {
+    const current = this.catalog.get(projectId);
     if (current) current.saleStartTime = newStartTime;
   }
 
-  public setSaleTimes(waitingRoomTime: number, saleTime: number) {
-    const current = this.catalog.get('50000001568003');
+  public setSaleTimes(waitingRoomTime: number, saleTime: number, projectId: string = '50000001568003') {
+    const current = this.catalog.get(projectId);
     if (current) {
       current.waitingRoomStartTime = waitingRoomTime;
       current.saleStartTime = saleTime;
